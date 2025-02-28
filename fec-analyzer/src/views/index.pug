@@ -1,0 +1,31 @@
+doctype html
+html(lang="fr")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Analyseur FEC - Détection d'Anomalies
+    link(rel="stylesheet", href="/styles.css")
+  body
+    header
+      h1 Analyseur de Fichiers FEC
+      p Outil d'audit pour détecter les anomalies et fraudes potentielles
+    
+    main
+      .upload-container
+        h2 Charger un fichier FEC
+        form(action="/upload", method="post", enctype="multipart/form-data")
+          .file-input
+            label(for="fec-file") Sélectionnez un fichier FEC (format .xlsx ou .csv)
+            input#fec-file(type="file", name="fec-file", accept=".xlsx,.csv", required)
+          
+          .upload-info
+            p Les formats acceptés sont:
+            ul
+              li Fichier Excel (.xlsx)
+              li Fichier CSV (.csv)
+          
+          button(type="submit") Analyser le fichier
+    
+    footer
+      p © 2025 Analyseur FEC - Tous droits réservés
+

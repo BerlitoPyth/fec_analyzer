@@ -1,0 +1,446 @@
+doctype html
+html(lang="fr")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Analyse Avancée FEC
+    link(rel="stylesheet", href="/styles.css")
+    link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css")
+    script(src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js")
+  body
+    header
+      h1 Analyse Avancée FEC
+      .header-actions
+        a.btn-back(href="/dashboard") Retour au tableau de bord
+        a.btn-export#exportAnalytics(href="#") Exporter l'analyse
+    
+    main.analytics
+      .analytics-header
+        .analytics-intro
+          h2 Analyse temporelle et structurelle
+          p Cette page présente des analyses approfondies sur la distribution temporelle des écritures, les tendances par journal et compte, et les analyses statistiques des anomalies.
+      
+      .analytics-section
+        h3 Distribution temporelle
+        
+        .analytics-row
+          .analytics-card.card-large
+            h4 Évolution des écritures dans le temps
+            canvas#timeSeriesChart
+            .chart-legend
+              .legend-item
+                span.legend-color(style="background-color: rgba(52, 152, 219, 0.7)")
+                span.legend-label Nombre d'écritures
+              .legend-item
+                span.legend-color(style="background-color: rgba(46, 204, 113, 0.7)")
+                span.legend-label Montant total (€)
+            .chart-info
+              p.tip Les pics d'activité ou de montants peuvent révéler des périodes de forte activité ou des ajustements comptables importants.
+        
+        .analytics-row
+          .analytics-card.card-medium
+            h4 Distribution par mois
+            canvas#monthDistributionChart
+            .chart-info
+              p.tip Une concentration excessive d'écritures en fin d'année ou d'exercice peut indiquer des ajustements tardifs.
+          
+          .analytics-card.card-medium
+            h4 Distribution par jour de semaine
+            canvas#dayOfWeekChart
+            .chart-info
+              p.tip Les écritures passées le weekend sont inhabituelles et méritent une attention particulière.
+      
+      .analytics-section
+        h3 Analyse structurelle
+        
+        .analytics-row
+          .analytics-card.card-medium
+            h4 Top Journaux par volume
+            canvas#journalsChart
+            .chart-info
+              p.tip Un volume anormalement élevé dans certains journaux peut indiquer des manipulations.
+          
+          .analytics-card.card-medium
+            h4 Intensité des anomalies par compte
+            canvas#anomaliesChart
+            .chart-info
+              p.tip Les comptes présentant de multiples anomalies doivent être examinés prioritairement.
+      
+      .analytics-section
+        h3 Analyse statistique avancée
+        
+        .analytics-row
+          .analytics-card.card-medium
+            h4 Analyse de corrélation
+            table.analytics-table
+              thead
+                tr
+                  th Indicateur 1
+                  th Indicateur 2
+                  th Coefficient
+                  th Interprétation
+              tbody
+                tr
+                  td Montant des écritures
+                  td Jour de la semaine
+                  td#corr1
+                  td#corr1Interpretation
+                tr
+                  td Heure d'enregistrement
+                  td Montant des écritures
+                  td#corr2
+                  td#corr2Interpretation
+                tr
+                  td Fréquence des ajustements
+                  td Mois de l'exercice
+                  td#corr3
+                  td#corr3Interpretation
+          
+          .analytics-card.card-medium
+            h4 Analyse de distribution
+            canvas#distributionAnalysisChart
+            .chart-info
+              p.tip Une distribution normale des montants est généralement attendue. Toute asymétrie importante pourrait indiquer des manipulations.
+      
+      .analytics-section
+        h3 Recommandations d'investigation
+        
+        .analytics-row
+          .analytics-card.card-full
+            .recommendations-list#advancedRecommendations
+              // Inséré dynamiquement par JavaScript
+    
+    script.
+      // Données pour les graphiques
+      const analyticsData = !{JSON.stringify(prepareAnalyticsData(data, analysis))};
+      
+      document.addEventListener('DOMContentLoaded', function() {
+        // Graphique d'évolution temporelle
+        const timeSeriesCtx = document.getElementById('timeSeriesChart').getContext('2d');
+        new Chart(timeSeriesCtx, {
+          type: 'line',
+          data: {
+            labels: analyticsData.timeSeries.labels,
+            datasets: [{
+              label: 'Nombre d\'écritures',
+              data: analyticsData.timeSeries.entries,
+              borderColor: 'rgba(52, 152, 219, 1)',
+              backgroundColor: 'rgba(52, 152, 219, 0.1)',
+              yAxisID: 'y',
+              tension: 0.2,
+              fill: true
+            }, {
+              label: 'Montant total (€)',
+              data: analyticsData.timeSeries.amounts,
+              borderColor: 'rgba(46, 204, 113, 1)',
+              backgroundColor: 'rgba(46, 204, 113, 0.1)',
+              yAxisID: 'y1',
+              tension: 0.2,
+              fill: true,
+              hidden: true // Caché par défaut
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                type: 'linear',
+                position: 'left',
+                title: {
+                  display: true,
+                  text: 'Nombre d\'écritures'
+                }
+              },
+              y1: {
+                type: 'linear',
+                position: 'right',
+                title: {
+                  display: true,
+                  text: 'Montant total (€)'
+                },
+                grid: {
+                  drawOnChartArea: false
+                }
+              }
+            },
+            plugins: {
+              tooltip: {
+                mode: 'index',
+                intersect: false
+              }
+            }
+          }
+        });
+        
+        // Graphique de distribution par mois
+        const monthDistributionCtx = document.getElementById('monthDistributionChart').getContext('2d');
+        new Chart(monthDistributionCtx, {
+          type: 'bar',
+          data: {
+            labels: analyticsData.monthlyDistribution.labels,
+            datasets: [{
+              label: 'Nombre d\'écritures',
+              data: analyticsData.monthlyDistribution.data,
+              backgroundColor: 'rgba(52, 152, 219, 0.7)',
+              borderColor: 'rgba(52, 152, 219, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            }
+          }
+        });
+        
+        // Graphique de distribution par jour de semaine
+        const dayOfWeekCtx = document.getElementById('dayOfWeekChart').getContext('2d');
+        new Chart(dayOfWeekCtx, {
+          type: 'bar',
+          data: {
+            labels: analyticsData.dayOfWeek.labels,
+            datasets: [{
+              label: 'Nombre d\'écritures',
+              data: analyticsData.dayOfWeek.data,
+              backgroundColor: [
+                'rgba(52, 152, 219, 0.7)', // Lundi-Vendredi
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(231, 76, 60, 0.7)',  // Weekend
+                'rgba(231, 76, 60, 0.7)'   // Weekend
+              ],
+              borderColor: [
+                'rgba(52, 152, 219, 1)',
+                'rgba(52, 152, 219, 1)',
+                'rgba(52, 152, 219, 1)',
+                'rgba(52, 152, 219, 1)',
+                'rgba(52, 152, 219, 1)',
+                'rgba(231, 76, 60, 1)',
+                'rgba(231, 76, 60, 1)'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              }
+            }
+          }
+        });
+        
+        // Simuler des données pour les graphiques manquants (en attendant l'implémentation)
+        // Ces graphiques seront remplacés par les vraies données une fois implémentés
+        
+        // Graphique pour les journaux
+        const journalsCtx = document.getElementById('journalsChart').getContext('2d');
+        new Chart(journalsCtx, {
+          type: 'doughnut',
+          data: {
+            labels: ['ACH', 'VTE', 'BNQ', 'OD', 'PAIE'],
+            datasets: [{
+              data: [215, 185, 125, 93, 57],
+              backgroundColor: [
+                'rgba(52, 152, 219, 0.7)',
+                'rgba(46, 204, 113, 0.7)',
+                'rgba(155, 89, 182, 0.7)',
+                'rgba(230, 126, 34, 0.7)',
+                'rgba(52, 73, 94, 0.7)'
+              ],
+              borderColor: [
+                'rgba(52, 152, 219, 1)',
+                'rgba(46, 204, 113, 1)',
+                'rgba(155, 89, 182, 1)',
+                'rgba(230, 126, 34, 1)',
+                'rgba(52, 73, 94, 1)'
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false
+          }
+        });
+        
+        // Graphique pour les anomalies par compte
+        const anomaliesCtx = document.getElementById('anomaliesChart').getContext('2d');
+        new Chart(anomaliesCtx, {
+          type: 'bubble',
+          data: {
+            datasets: [
+              {
+                label: 'Comptes clients',
+                data: [
+                  { x: 15, y: 25, r: 10 },
+                  { x: 8, y: 5, r: 5 },
+                  { x: 3, y: 10, r: 8 }
+                ],
+                backgroundColor: 'rgba(52, 152, 219, 0.7)'
+              },
+              {
+                label: 'Comptes fournisseurs',
+                data: [
+                  { x: 5, y: 20, r: 7 },
+                  { x: 12, y: 12, r: 9 },
+                  { x: 18, y: 8, r: 6 }
+                ],
+                backgroundColor: 'rgba(46, 204, 113, 0.7)'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Nombre d\'anomalies'
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Volume de transactions (k€)'
+                }
+              }
+            }
+          }
+        });
+        
+        // Graphique pour l'analyse de distribution
+        const distributionCtx = document.getElementById('distributionAnalysisChart').getContext('2d');
+        new Chart(distributionCtx, {
+          type: 'scatter',
+          data: {
+            datasets: [{
+              label: 'Distribution des montants',
+              data: [
+                { x: 100, y: 25 },
+                { x: 200, y: 40 },
+                { x: 300, y: 65 },
+                { x: 400, y: 80 },
+                { x: 500, y: 72 },
+                { x: 600, y: 55 },
+                { x: 700, y: 40 },
+                { x: 800, y: 30 },
+                { x: 900, y: 20 },
+                { x: 1000, y: 15 }
+              ],
+              backgroundColor: 'rgba(52, 152, 219, 0.7)'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                title: {
+                  display: true,
+                  text: 'Montant (€)'
+                }
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: 'Fréquence'
+                }
+              }
+            }
+          }
+        });
+        
+        // Simulations de coefficients de corrélation
+        document.getElementById('corr1').textContent = '0.23';
+        document.getElementById('corr1Interpretation').textContent = 'Corrélation faible';
+        
+        document.getElementById('corr2').textContent = '-0.12';
+        document.getElementById('corr2Interpretation').textContent = 'Corrélation négative faible';
+        
+        document.getElementById('corr3').textContent = '0.67';
+        document.getElementById('corr3Interpretation').textContent = 'Corrélation positive modérée';
+        
+        // Générer les recommandations
+        const recommendationsContainer = document.getElementById('advancedRecommendations');
+        
+        // Exemple de recommandations avancées basées sur l'analyse
+        const advancedRecommendations = [
+          {
+            title: "Vérifier les anomalies temporelles",
+            description: "Concentration d'écritures en fin de mois et de trimestre, particulièrement en décembre.",
+            actions: [
+              "Examiner les écritures du dernier jour de chaque trimestre",
+              "Vérifier la documentation des ajustements de fin de période",
+              "Contrôler les écritures passées en dehors des heures de bureau"
+            ]
+          },
+          {
+            title: "Analyser les transactions du weekend",
+            description: `${analyticsData.dayOfWeek.data[0] + analyticsData.dayOfWeek.data[6]} écritures ont été passées pendant le weekend.`,
+            actions: [
+              "Identifier les utilisateurs qui ont effectué ces saisies",
+              "Vérifier la légitimité des opérations de weekend",
+              "Établir si ces transactions sont manuelles ou automatisées"
+            ]
+          },
+          {
+            title: "Examiner les comptes à haute intensité d'anomalies",
+            description: "Certains comptes présentent une concentration anormale d'anomalies par rapport à leur volume.",
+            actions: [
+              "Effectuer une revue détaillée des comptes dans le quadrant supérieur droit du graphique",
+              "Vérifier la validité des pièces justificatives pour ces comptes",
+              "Comparer avec les soldes des années précédentes"
+            ]
+          }
+        ];
+        
+        advancedRecommendations.forEach(rec => {
+          const recElement = document.createElement('div');
+          recElement.className = 'recommendation-item';
+          
+          const titleElement = document.createElement('h4');
+          titleElement.textContent = rec.title;
+          recElement.appendChild(titleElement);
+          
+          const descElement = document.createElement('p');
+          descElement.textContent = rec.description;
+          recElement.appendChild(descElement);
+          
+          if (rec.actions && rec.actions.length > 0) {
+            const actionsTitle = document.createElement('h5');
+            actionsTitle.textContent = "Actions recommandées:";
+            actionsTitle.className = 'actions-title';
+            recElement.appendChild(actionsTitle);
+            
+            const actionsList = document.createElement('ul');
+            rec.actions.forEach(action => {
+              const actionItem = document.createElement('li');
+              actionItem.textContent = action;
+              actionsList.appendChild(actionItem);
+            });
+            recElement.appendChild(actionsList);
+          }
+          
+          recommendationsContainer.appendChild(recElement);
+        });
+        
+        // Fonction d'export
+        document.getElementById('exportAnalytics').addEventListener('click', function(e) {
+          e.preventDefault();
+          window.print();
+        });
+      });
+    
+    footer
+      p © 2025 Analyseur FEC - Tous droits réservés

@@ -1,0 +1,413 @@
+doctype html
+html(lang="fr")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Tableau de Bord FEC - Analyse
+    link(rel="stylesheet", href="/styles.css")
+    link(rel="stylesheet", href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css")
+    script(src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js")
+  body
+    header
+      h1 Tableau de Bord d'Analyse FEC
+      .header-actions
+        a.btn-advanced(href="/analytics") Analyse avancée
+        a.btn-back(href="/results") Retour aux résultats
+        a.btn-export#exportDashboard(href="#") Exporter le rapport
+    
+    main.dashboard
+      .dashboard-header
+        .summary-box
+          h3 Résumé de l'analyse
+          .summary-grid
+            .summary-item
+              span.label Nombre d'écritures:
+              span.value #{analysis.summary.totalEntries.toLocaleString('fr-FR')}
+            .summary-item
+              span.label Période:
+              span.value #{analysis.summary.dateRange.start ? analysis.summary.dateRange.start.toLocaleDateString() : 'N/A'} - #{analysis.summary.dateRange.end ? analysis.summary.dateRange.end.toLocaleDateString() : 'N/A'}
+            .summary-item
+              span.label Total Débit:
+              span.value #{analysis.summary.totalDebit.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+            .summary-item
+              span.label Total Crédit:
+              span.value #{analysis.summary.totalCredit.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+            .summary-item
+              span.label Balance:
+              span.value(class=(Math.abs(analysis.summary.totalDebit - analysis.summary.totalCredit) > 0.01 ? 'text-warning' : 'text-success')) #{(analysis.summary.totalDebit - analysis.summary.totalCredit).toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})} €
+        
+        .anomalies-overview
+          h3 Indicateurs d'anomalies
+          .anomaly-metrics
+            .metric-item(class=analysis.anomalies.duplicateEntries.length > 0 ? 'warning' : 'success')
+              .metric-icon
+                i.fas.fa-clone
+              .metric-content
+                span.metric-value #{analysis.anomalies.duplicateEntries.length}
+                span.metric-label Écritures en double
+            
+            .metric-item(class=analysis.anomalies.unbalancedEntries.length > 0 ? 'warning' : 'success')
+              .metric-icon
+                i.fas.fa-balance-scale
+              .metric-content
+                span.metric-value #{analysis.anomalies.unbalancedEntries.length}
+                span.metric-label Non équilibrées
+            
+            .metric-item(class=analysis.anomalies.roundAmounts.length > 5 ? 'warning' : 'success')
+              .metric-icon
+                i.fas.fa-coins
+              .metric-content
+                span.metric-value #{analysis.anomalies.roundAmounts.length}
+                span.metric-label Montants ronds
+            
+            .metric-item(class=analysis.anomalies.weekendTransactions.length > 5 ? 'warning' : 'success')
+              .metric-icon
+                i.fas.fa-calendar-alt
+              .metric-content
+                span.metric-value #{analysis.anomalies.weekendTransactions.length}
+                span.metric-label Transactions weekend
+      
+      .dashboard-risk-assessment
+        h3 Évaluation du risque global
+        .risk-meter
+          - const totalAnomalies = analysis.anomalies.duplicateEntries.length + analysis.anomalies.unbalancedEntries.length + analysis.anomalies.roundAmounts.length + analysis.anomalies.weekendTransactions.length
+          - const riskLevel = totalAnomalies > 50 ? 'high' : (totalAnomalies > 20 ? 'medium' : 'low')
+          .risk-indicator(class=`risk-${riskLevel}`)
+            span.risk-level #{riskLevel === 'high' ? 'Élevé' : (riskLevel === 'medium' ? 'Moyen' : 'Faible')}
+          p.risk-explanation= getRiskExplanation(riskLevel, totalAnomalies)
+      
+      .dashboard-charts-section
+        h3 Analyses graphiques
+        
+        .dashboard-charts-grid
+          .chart-container.chart-medium
+            h4 Distribution des montants
+            canvas#amountsChart.chart
+            .chart-info
+              p Cette distribution montre la répartition des transactions par plage de montants.
+              p.tip Astuce: Une distribution anormalement concentrée dans certaines plages peut indiquer des manipulations.
+          
+          .chart-container.chart-medium
+            h4 Activité par catégorie de compte
+            canvas#accountsChart.chart
+            .chart-info
+              p Répartition des écritures par catégorie principale de compte.
+              p.tip Astuce: Un volume anormal dans les comptes 4 (tiers) peut indiquer des transactions fictives.
+          
+          .chart-container.chart-medium
+            h4 Analyse de la loi de Benford
+            canvas#benfordChart.chart
+            .chart-info
+              p Comparaison entre la distribution des premiers chiffres et la loi de Benford.
+              p.tip Astuce: Un écart important peut indiquer des chiffres manipulés ou inventés.
+          
+          .chart-container.chart-medium
+            h4 Évolution temporelle des transactions
+            canvas#timelineChart.chart
+            .chart-info
+              p Nombre de transactions par période.
+              p.tip Astuce: Des pics d'activité en fin d'exercice peuvent indiquer des ajustements tardifs.
+      
+      .dashboard-tables-section
+        .dashboard-tables-grid
+          .table-container.table-medium
+            h4 Top 10 des comptes par volume
+            table.dashboard-table
+              thead
+                tr
+                  th Compte
+                  th Transactions
+                  th Montant Total (€)
+              tbody#topAccounts
+          
+          .table-container.table-medium
+            h4 Anomalies critiques détectées
+            if getCriticalAnomalies(analysis).length > 0
+              table.dashboard-table
+                thead
+                  tr
+                    th Type
+                    th Détail
+                    th Niveau
+                tbody
+                  each item in getCriticalAnomalies(analysis)
+                    tr
+                      td= item.type
+                      td= item.detail
+                      td
+                        span(class=`severity-${item.severity}`)= item.severity === 'high' ? 'Élevé' : (item.severity === 'medium' ? 'Moyen' : 'Faible')
+            else
+              .empty-state
+                p.success Aucune anomalie critique détectée.
+
+      .dashboard-detailed-section
+        h3 Détail des anomalies spécifiques
+        
+        .accordion-container
+          .accordion-item
+            .accordion-header(onclick="toggleAccordion('sequence-gaps')")
+              h4 
+                i.fas.fa-chevron-right
+                span Ruptures de séquence
+                if analysis.anomalies.sequenceGaps && analysis.anomalies.sequenceGaps.length > 0
+                  span.badge.badge-warning #{analysis.anomalies.sequenceGaps.length}
+                else
+                  span.badge.badge-success 0
+          
+            .accordion-content#sequence-gaps
+              p.explanation Les ruptures de séquence sont des écarts dans la numérotation chronologique des pièces comptables. Elles peuvent indiquer des suppressions d'écritures ou des manipulations dans le journal comptable.
+              
+              if analysis.anomalies.sequenceGaps && analysis.anomalies.sequenceGaps.length > 0
+                table.dashboard-table
+                  thead
+                    tr
+                      th Journal
+                      th De
+                      th À
+                      th Écritures manquantes
+                  tbody
+                    each gap in analysis.anomalies.sequenceGaps.slice(0, 15)
+                      tr
+                        td= gap.journal
+                        td= gap.gap.from
+                        td= gap.gap.to
+                        td= gap.gap.missing
+                  if analysis.anomalies.sequenceGaps.length > 15
+                    caption Affichage limité aux 15 premières ruptures sur #{analysis.anomalies.sequenceGaps.length} détectées.
+              else
+                p.success Aucune rupture de séquence détectée dans les journaux.
+          
+          .accordion-item
+            .accordion-header(onclick="toggleAccordion('unusual-timing')")
+              h4
+                i.fas.fa-chevron-right
+                span Transactions à horaires inhabituels
+                if analysis.anomalies.unusualTransactionTimes && analysis.anomalies.unusualTransactionTimes.length > 0
+                  span.badge.badge-warning #{analysis.anomalies.unusualTransactionTimes.length}
+                else
+                  span.badge.badge-success 0
+          
+            .accordion-content#unusual-timing
+              p.explanation Les transactions effectuées pendant la nuit (23h-5h) peuvent indiquer des opérations suspectes ou des modifications après la journée de travail normale.
+              // Contenu similaire au tableau des ruptures de séquence...
+
+          // Vous pouvez ajouter d'autres sections d'accordéon pour d'autres types d'anomalies...
+      
+      .dashboard-recommendations
+        h3 Recommandations d'audit
+        .recommendations-list
+          each rec in getRecommendations(analysis)
+            .recommendation-item
+              h4= rec.title
+              p= rec.description
+              if rec.details
+                ul
+                  each detail in rec.details
+                    li= detail
+    
+    script.
+      // Données pour les graphiques
+      const analysisData = !{JSON.stringify(prepareChartsData(data, analysis))};
+      
+      // Configuration des graphiques pour Chart.js
+      const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { mode: 'index', intersect: false }
+        }
+      };
+      
+      // Initialiser les graphiques une fois la page chargée
+      document.addEventListener('DOMContentLoaded', function() {
+        // Graphique de distribution des montants
+        new Chart(
+          document.getElementById('amountsChart'),
+          {
+            type: 'bar',
+            data: {
+              labels: analysisData.amountRanges.labels,
+              datasets: [{
+                label: 'Nombre de transactions',
+                data: analysisData.amountRanges.data,
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: 'rgb(52, 152, 219)',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              ...chartOptions,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Nombre de transactions'
+                  }
+                }
+              }
+            }
+          }
+        );
+        
+        // Graphique d'activité par compte
+        new Chart(
+          document.getElementById('accountsChart'),
+          {
+            type: 'doughnut',
+            data: {
+              labels: analysisData.accountActivity.labels,
+              datasets: [{
+                data: analysisData.accountActivity.data,
+                backgroundColor: [
+                  'rgba(52, 152, 219, 0.7)',
+                  'rgba(46, 204, 113, 0.7)',
+                  'rgba(231, 76, 60, 0.7)',
+                  'rgba(243, 156, 18, 0.7)',
+                  'rgba(155, 89, 182, 0.7)',
+                  'rgba(26, 188, 156, 0.7)',
+                  'rgba(52, 73, 94, 0.7)',
+                  'rgba(149, 165, 166, 0.7)',
+                  'rgba(230, 126, 34, 0.7)',
+                  'rgba(22, 160, 133, 0.7)'
+                ],
+                borderColor: [
+                  'rgb(52, 152, 219)',
+                  'rgb(46, 204, 113)',
+                  'rgb(231, 76, 60)',
+                  'rgb(243, 156, 18)',
+                  'rgb(155, 89, 182)',
+                  'rgb(26, 188, 156)',
+                  'rgb(52, 73, 94)',
+                  'rgb(149, 165, 166)',
+                  'rgb(230, 126, 34)',
+                  'rgb(22, 160, 133)'
+                ],
+                borderWidth: 1
+              }]
+            },
+            options: {
+              ...chartOptions,
+              cutout: '60%'
+            }
+          }
+        );
+        
+        // Graphique de la loi de Benford
+        new Chart(
+          document.getElementById('benfordChart'),
+          {
+            type: 'bar',
+            data: {
+              labels: ['1', '2', '3', '4', '5', '6', '7', '8', '9'],
+              datasets: [{
+                label: 'Distribution observée',
+                data: analysisData.benford.observed,
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: 'rgb(52, 152, 219)',
+                borderWidth: 1
+              }, {
+                label: 'Distribution théorique (Benford)',
+                data: analysisData.benford.expected,
+                type: 'line',
+                borderColor: 'rgb(231, 76, 60)',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+              }]
+            },
+            options: {
+              ...chartOptions,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 0.35,
+                  title: {
+                    display: true,
+                    text: 'Fréquence'
+                  }
+                }
+              }
+            }
+          }
+        );
+        
+        // Graphique des transactions dans le temps
+        new Chart(
+          document.getElementById('timelineChart'),
+          {
+            type: 'line',
+            data: {
+              labels: analysisData.timeline.labels,
+              datasets: [{
+                label: 'Nombre de transactions',
+                data: analysisData.timeline.data,
+                borderColor: 'rgb(52, 152, 219)',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.2,
+                fill: true
+              }]
+            },
+            options: {
+              ...chartOptions,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  title: {
+                    display: true,
+                    text: 'Nombre de transactions'
+                  }
+                }
+              }
+            }
+          }
+        );
+        
+        // Remplir le tableau des comptes les plus actifs
+        const topAccountsTable = document.getElementById('topAccounts');
+        analysisData.topAccounts.forEach(account => {
+          const row = document.createElement('tr');
+          
+          const accountCell = document.createElement('td');
+          accountCell.textContent = account.account;
+          
+          const transactionsCell = document.createElement('td');
+          transactionsCell.textContent = account.transactions.toLocaleString('fr-FR');
+          
+          const amountCell = document.createElement('td');
+          amountCell.textContent = account.amount.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+          
+          row.appendChild(accountCell);
+          row.appendChild(transactionsCell);
+          row.appendChild(amountCell);
+          
+          topAccountsTable.appendChild(row);
+        });
+        
+        // Fonction d'export du rapport
+        document.getElementById('exportDashboard').addEventListener('click', function(e) {
+          e.preventDefault();
+          window.print();
+        });
+      });
+      
+      // Ajouter à l'intérieur de la section script existante
+      function toggleAccordion(id) {
+        const content = document.getElementById(id);
+        const header = content.previousElementSibling;
+        
+        // Toggle active class
+        header.classList.toggle('active');
+        
+        // Toggle visibility
+        if (content.style.maxHeight) {
+          content.style.maxHeight = null;
+        } else {
+          content.style.maxHeight = content.scrollHeight + "px";
+        }
+      }
+    
+    footer
+      p © 2025 Analyseur FEC - Tous droits réservés

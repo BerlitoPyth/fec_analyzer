@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyseur FEC - Détection d'Anomalies</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <header>
+        <h1>Analyseur de Fichiers FEC</h1>
+        <p>Outil d'audit pour détecter les anomalies et fraudes potentielles</p>
+    </header>
+    <main>
+        <div class="upload-container">
+            <h2>Charger un fichier FEC</h2>
+            <form action="/upload" method="post" enctype="multipart/form-data">
+                <div class="file-input">
+                    <label for="fec-file">Sélectionnez un fichier FEC (format .xlsx ou .csv)</label>
+                    <input id="fec-file" type="file" name="fec-file" accept=".xlsx,.csv" required>
+                </div>
+                <div class="upload-info">
+                    <p>Les formats acceptés sont:</p>
+                    <ul>
+                        <li>Fichier Excel (.xlsx)</li>
+                        <li>Fichier CSV (.csv)</li>
+                    </ul>
+                </div>
+                <button type="submit">Analyser le fichier</button>
+            </form>
+        </div>
+    </main>
+    <footer>
+        <p>© 2025 Analyseur FEC - Tous droits réservés</p>
+    </footer>
+    <script src="app.js"></script>
+</body>
+</html>

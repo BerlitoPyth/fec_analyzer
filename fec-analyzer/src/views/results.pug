@@ -1,0 +1,185 @@
+doctype html
+html(lang="fr")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Résultats d'Analyse FEC
+    link(rel="stylesheet", href="/styles.css")
+  body
+    header
+      h1 Résultats d'Analyse FEC
+      div.header-actions
+        a.btn-dashboard(href="/dashboard") Voir le tableau de bord
+        a.btn-back(href="/") Retour
+
+    main
+      section.summary
+        h2 Résumé de l'Analyse
+        .summary-card
+          h3 Informations Générales
+          p Nombre total d'écritures: #{analysis.summary.totalEntries}
+          if analysis.summary.dateRange.start
+            p Période: #{analysis.summary.dateRange.start.toLocaleDateString()} - #{analysis.summary.dateRange.end.toLocaleDateString()}
+          p Total Débit: #{analysis.summary.totalDebit.toFixed(2)} €
+          p Total Crédit: #{analysis.summary.totalCredit.toFixed(2)} €
+          p Balance: #{(analysis.summary.totalDebit - analysis.summary.totalCredit).toFixed(2)} €
+      
+      section.anomalies
+        h2 Anomalies Détectées
+        
+        .anomaly-card
+          h3 Écritures en Double
+          if analysis.anomalies.duplicateEntries.length > 0
+            p.warning #{analysis.anomalies.duplicateEntries.length} écritures potentiellement dupliquées détectées.
+            if analysis.anomalies.duplicateEntries.length > 100
+              p Note: Affichage limité aux 100 premiers résultats pour des raisons de performance.
+            table
+              thead
+                tr
+                  th Index
+                  th Journal
+                  th N° Écriture
+                  th Compte
+                  th Date
+                  th Montant
+                  th Description
+              tbody
+                each duplicate in analysis.anomalies.duplicateEntries.slice(0, 100)
+                  tr
+                    td= duplicate.index
+                    td= duplicate.entry.JournalCode || duplicate.entry.journal_code
+                    td= duplicate.entry.EcritureNum || duplicate.entry.ecriture_num
+                    td= duplicate.entry.CompteNum || duplicate.entry.compte_num
+                    td= duplicate.entry.DatePiece || duplicate.entry.date_piece
+                    td= (duplicate.entry.Debit || duplicate.entry.debit || duplicate.entry.Credit || duplicate.entry.credit) + ' €'
+                    td= duplicate.entry.EcritureLib || duplicate.entry.ecriture_lib
+            if analysis.anomalies.duplicateEntries.length > 100
+              caption Affichage des 100 premiers résultats sur #{analysis.anomalies.duplicateEntries.length} au total.
+          else
+            p.success Aucune écriture dupliquée détectée.
+
+        .anomaly-card
+          h3 Écritures Non Équilibrées
+          if analysis.anomalies.unbalancedEntries.length > 0
+            p.warning #{analysis.anomalies.unbalancedEntries.length} écritures non équilibrées détectées.
+            table
+              thead
+                tr
+                  th Référence
+                  th Écart
+              tbody
+                each entry in analysis.anomalies.unbalancedEntries
+                  tr
+                    td= entry.journalEntryId
+                    td= entry.diff.toFixed(2) + ' €'
+          else
+            p.success Toutes les écritures sont équilibrées.
+            
+        .anomaly-card
+          h3 Montants Ronds
+          if analysis.anomalies.roundAmounts.length > 0
+            p.warning #{analysis.anomalies.roundAmounts.length} écritures avec des montants ronds détectées.
+            table
+              thead
+                tr
+                  th Journal
+                  th Date
+                  th Montant
+                  th Description
+              tbody
+                each entry in analysis.anomalies.roundAmounts.slice(0, 10)
+                  tr
+                    td= entry.JournalCode || entry.journal_code
+                    td= entry.DatePiece || entry.date_piece
+                    td= (entry.Debit || entry.debit || entry.Credit || entry.credit) + ' €'
+                    td= entry.EcritureLib || entry.ecriture_lib
+            if analysis.anomalies.roundAmounts.length > 10
+              caption Et #{analysis.anomalies.roundAmounts.length - 10} autres...
+          else
+            p.success Aucun montant anormalement rond détecté.
+
+        .anomaly-card
+          h3 Transactions le Weekend
+          if analysis.anomalies.weekendTransactions.length > 0
+            p.warning #{analysis.anomalies.weekendTransactions.length} écritures passées le weekend.
+            table
+              thead
+                tr
+                  th Journal
+                  th Date
+                  th Montant
+                  th Description
+              tbody
+                each entry in analysis.anomalies.weekendTransactions.slice(0, 10)
+                  tr
+                    td= entry.JournalCode || entry.journal_code
+                    td= entry.DatePiece || entry.date_piece
+                    td= (entry.Debit || entry.debit || entry.Credit || entry.credit) + ' €'
+                    td= entry.EcritureLib || entry.ecriture_lib
+            if analysis.anomalies.weekendTransactions.length > 10
+              caption Et #{analysis.anomalies.weekendTransactions.length - 10} autres...
+          else
+            p.success Aucune transaction le weekend détectée.
+      
+      section.fraud-indicators
+        h2 Indicateurs de Fraude Potentielle
+        
+        .fraud-card
+          h3 Ajustements Fréquents
+          if analysis.fraudIndicators.frequentAdjustments.length > 0
+            p.warning #{analysis.fraudIndicators.frequentAdjustments.length} comptes avec des ajustements fréquents.
+            table
+              thead
+                tr
+                  th Compte
+                  th Nombre d'Ajustements
+              tbody
+                each account in analysis.fraudIndicators.frequentAdjustments
+                  tr
+                    td= account.account
+                    td= account.count
+          else
+            p.success Aucun compte avec des ajustements fréquents.
+            
+        .fraud-card
+          h3 Écritures Inhabituelles
+          if analysis.fraudIndicators.unusualJournalEntries.length > 0
+            p.warning #{analysis.fraudIndicators.unusualJournalEntries.length} écritures inhabituelles détectées.
+            table
+              thead
+                tr
+                  th Journal
+                  th Date
+                  th Montant
+                  th Description
+              tbody
+                each entry in analysis.fraudIndicators.unusualJournalEntries.slice(0, 10)
+                  tr
+                    td= entry.JournalCode || entry.journal_code
+                    td= entry.DatePiece || entry.date_piece
+                    td= (entry.Debit || entry.debit || entry.Credit || entry.credit) + ' €'
+                    td= entry.EcritureLib || entry.ecriture_lib
+            if analysis.fraudIndicators.unusualJournalEntries.length > 10
+              caption Et #{analysis.fraudIndicators.unusualJournalEntries.length - 10} autres...
+          else
+            p.success Aucune écriture inhabituelle détectée.
+      
+      section.data-table
+        h2 Aperçu des Données
+        .table-container
+          table
+            thead
+              tr
+                if data.length > 0
+                  each key in Object.keys(data[0])
+                    th= key
+            tbody
+              each row in data.slice(0, 50)
+                tr
+                  each value, key in row
+                    td= value
+            if data.length > 50
+              caption Affichage des 50 premières lignes sur #{data.length} au total.
+
+    footer
+      p © 2025 Analyseur FEC - Tous droits réservés
